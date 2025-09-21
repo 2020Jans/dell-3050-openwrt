@@ -1,0 +1,38 @@
+name: Build OpenWrt for Dell 3050
+
+on:
+  workflow_dispatch:   # 手动触发
+  push:
+    branches:
+      - dell3050-build
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Update Feeds
+      run: |
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: Configure
+      run: |
+        make defconfig
+        # 覆盖为你专用的 .config
+        cp configs/dell3050.config .config
+
+    - name: Download
+      run: make download -j$(nproc)
+
+    - name: Build
+      run: make -j$(nproc) || make -j1 V=s
+
+    - name: Upload firmware
+      uses: actions/upload-artifact@v3
+      with:
+        name: dell3050-openwrt
+        path: bin/targets/x86/64/*
